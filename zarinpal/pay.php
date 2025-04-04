@@ -1,36 +1,41 @@
 <?php
-/*
- * ZarinPal Advanced Class
- *
- * version 	: 1.0
- * link 	: https://vrl.ir/zpc
- *
- * author 	: milad maldar
- * e-mail 	: miladworkshop@gmail.com
- * website 	: https://miladworkshop.ir
-*/
 
-require_once("zarinpal_function.php");
+$data = array("merchant_id" => "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "amount" => 1000,
+    "callback_url" => "http://www.yoursite.com/verify.php",
+    "description" => "خرید تست",
+    "metadata" => [ "email" => "info@email.com","mobile"=>"09121234567"],
+    );
+$jsonData = json_encode($data);
+$ch = curl_init('https://api.zarinpal.com/pg/v4/payment/request.json');
+curl_setopt($ch, CURLOPT_USERAGENT, 'ZarinPal Rest Api v1');
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    'Content-Type: application/json',
+    'Content-Length: ' . strlen($jsonData)
+));
 
-$MerchantID 	= "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
-$Amount 		= 100;
-$Description 	= "تراکنش زرین پال";
-$Email 			= "";
-$Mobile 		= "";
-$CallbackURL 	= "http://example.com/verify.php";
-$ZarinGate 		= false;
-$SandBox 		= false;
+$result = curl_exec($ch);
+$err = curl_error($ch);
+$result = json_decode($result, true, JSON_PRETTY_PRINT);
+curl_close($ch);
 
-$zp 	= new zarinpal();
-$result = $zp->request($MerchantID, $Amount, $Description, $Email, $Mobile, $CallbackURL, $SandBox, $ZarinGate);
 
-if (isset($result["Status"]) && $result["Status"] == 100)
-{
-	// Success and redirect to pay
-	$zp->redirect($result["StartPay"]);
+
+if ($err) {
+    echo "cURL Error #:" . $err;
 } else {
-	// error
-	echo "خطا در ایجاد تراکنش";
-	echo "<br />کد خطا : ". $result["Status"];
-	echo "<br />تفسیر و علت خطا : ". $result["Message"];
+    if (empty($result['errors'])) {
+        if ($result['data']['code'] == 100) {
+            header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']["authority"]);
+        }
+    } else {
+         echo'Error Code: ' . $result['errors']['code'];
+         echo'message: ' .  $result['errors']['message'];
+
+    }
 }
+
+?>
